@@ -330,7 +330,7 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # --- NOWA SEKCJA: Edytuj Notatkę ---
+    
     if st.session_state.pro_portfolio:
         with st.expander("Edytuj Notatkę"):
             # Lista transakcji do wyboru
