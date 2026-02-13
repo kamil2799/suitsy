@@ -1,7 +1,5 @@
 import gspread
 import pandas as pd
-import os
-import time
 import streamlit as st
 from google.oauth2.service_account import Credentials
 
@@ -10,9 +8,19 @@ WORKSHEET_NAME = "Arkusz1"
 
 @st.cache_resource
 def get_gspread_client():
-    creds = Credentials.from_service_account_file("credentials.json", scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
-    return gspread.authorize(creds)
 
+    creds_info = st.secrets["gcp_service_account"]
+  
+    if "private_key" in creds_info:
+        creds_info["private_key"] = creds_info["private_key"].replace("\\n", "\n")
+        
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    
+    creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+    return gspread.authorize(creds)
 def get_worksheet():
     sh = get_gspread_client().open_by_url(SPREADSHEET_URL)
     try: return sh.worksheet(WORKSHEET_NAME)
