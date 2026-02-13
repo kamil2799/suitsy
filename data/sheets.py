@@ -9,8 +9,11 @@ WORKSHEET_NAME = "Arkusz1"
 
 @st.cache_resource
 def get_gspread_client():
-    creds_info = st.secrets["gcp_service_account"]
- 
+    # 1. Pobieramy sekrety i OD RAZU konwertujemy je na zwykły słownik
+    # To kluczowa zmiana: dict(...) tworzy kopię, którą można edytować
+    creds_info = dict(st.secrets["gcp_service_account"])
+    
+    # 2. Teraz możemy bezpiecznie poprawić znaki nowej linii
     if "private_key" in creds_info:
         creds_info["private_key"] = creds_info["private_key"].replace("\\n", "\n")
         
@@ -19,6 +22,7 @@ def get_gspread_client():
         "https://www.googleapis.com/auth/drive"
     ]
     
+    # 3. Przekazujemy edytowalny słownik do autoryzacji
     creds = Credentials.from_service_account_info(creds_info, scopes=scope)
     return gspread.authorize(creds)
 
@@ -72,3 +76,4 @@ def save_user_data(username, portfolio_list):
     except Exception as e:
         st.error(f"Błąd podczas zapisu: {e}")
         return False
+
