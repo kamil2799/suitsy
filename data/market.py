@@ -7,11 +7,9 @@ from core.metrics import clean_timezone
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_market_data(tickers, start_date):
-    """Pobiera dane historyczne z retry logic"""
     if not tickers: 
         return pd.DataFrame()
     
-    # Zapewnienie okresu minimum 30 dni wstecz
     start = pd.to_datetime(start_date)
     if (datetime.now() - start).days < 30:
         start = datetime.now() - timedelta(days=365)
@@ -31,8 +29,7 @@ def get_market_data(tickers, start_date):
                     continue
                 else:
                     return pd.DataFrame()
-                    
-            # Obsługa Close
+
             if 'Close' in data.columns:
                 data = data['Close']
             elif isinstance(data.columns, pd.MultiIndex):
@@ -46,7 +43,7 @@ def get_market_data(tickers, start_date):
             return clean_timezone(data)
             
         except Exception as e:
-            if attempt == 2:  # Ostatnia próba
+            if attempt == 2:  
                 st.warning(f"Nie udało się pobrać danych: {str(e)}")
                 return pd.DataFrame()
     
@@ -55,12 +52,10 @@ def get_market_data(tickers, start_date):
 
 @st.cache_data(ttl=300, show_spinner=False)
 def get_live_prices(tickers):
-    """Pobiera aktualne ceny z fallbackiem na dane historyczne"""
     if not tickers: 
         return {}
     
     try:
-        # Próba 1: Pobranie danych z ostatnich 5 dni
         data = yf.download(
             tickers, 
             period="5d", 
@@ -69,15 +64,12 @@ def get_live_prices(tickers):
         
         if data.empty:
             return {}
-        
-        # Sprawdź czy mamy kolumnę Close
         if 'Close' in data.columns:
             data = data['Close']
         elif isinstance(data.columns, pd.MultiIndex):
             if 'Close' in data.columns.get_level_values(0):
                 data = data['Close']
-            
-        # Forward fill dla brakujących wartości (weekendy)
+
         data = data.ffill()
         
         if isinstance(data, pd.Series):
@@ -111,24 +103,22 @@ def get_live_currencies(currencies):
     try:
         data = yf.download(
             to_fetch, 
-            period="5d",  # Więcej dni dla pewności
+            period="5d",  
             progress=False
         )
         
         if data.empty:
-            # Fallback - zwróć 1.0 dla wszystkich
             for c in currencies:
                 if c != 'PLN': rates[c] = 1.0
             return rates
-        
-        # Obsługa Close
+
         if 'Close' in data.columns:
             data = data['Close']
         elif isinstance(data.columns, pd.MultiIndex):
             if 'Close' in data.columns.get_level_values(0):
                 data = data['Close']
             
-        data = data.ffill()  # Forward fill
+        data = data.ffill()  
         
         if isinstance(data, pd.Series):
             curr_code = to_fetch[0].replace('PLN=X', '')
@@ -140,17 +130,13 @@ def get_live_currencies(currencies):
                 rates[curr_code] = float(last_row[col]) if pd.notna(last_row[col]) else 1.0
                 
     except Exception as e:
-        # Fallback na 1.0
         for c in currencies:
             if c not in rates: 
                 rates[c] = 1.0
                 
     return rates
 
-
-# TE FUNKCJE NIE MOGĄ MIEĆ CACHE - używane w formularzach!
 def validate_ticker(ticker):
-    """Waliduje ticker - BEZ CACHE bo używane w formularzu"""
     ticker = ticker.upper().strip().replace('.PL', '.WA')
     try:
         test = yf.download(ticker, period="5d", progress=False)
@@ -162,7 +148,6 @@ def validate_ticker(ticker):
 
 
 def get_currency_rate(pair):
-    """Pobiera kurs walutowy - BEZ CACHE bo używane w formularzu"""
     if not pair or "PLNPLN" in pair: 
         return 1.0
     try:
@@ -170,8 +155,7 @@ def get_currency_rate(pair):
         
         if data.empty:
             return 1.0
-        
-        # Obsługa Close
+
         if 'Close' in data.columns:
             data = data['Close']
         elif isinstance(data.columns, pd.MultiIndex):
@@ -183,3 +167,4 @@ def get_currency_rate(pair):
         return 1.0
     except Exception:
         return 1.0
+
