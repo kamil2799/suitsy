@@ -36,7 +36,6 @@ def render_sidebar(username, portfolio):
 
         st.markdown("---")
         with st.expander("➕ Dodaj Transakcję", expanded=True):
-            # Formularz musi być wewnątrz, ale selectbox waluty PRZED formularzem
             c_in = st.selectbox("Waluta Twojej Wpłaty", ["PLN", "USD", "EUR", "GBP"], key="currency_select")
             
             with st.form("add_trade"):
@@ -54,12 +53,10 @@ def render_sidebar(username, portfolio):
                     else:
                         with st.spinner("Przeliczam..."):
                             try:
-                                # Pobierz informacje o aktywie
                                 t_obj = yf.Ticker(symbol)
                                 info = t_obj.info
                                 asset_curr = info.get('currency', 'USD').upper()
-                                
-                                # Pobierz dane historyczne z rozszerzonym zakresem (±5 dni)
+
                                 start = d_in - timedelta(days=5)
                                 end = d_in + timedelta(days=5)
                                 hist = t_obj.history(start=start, end=end)
@@ -67,34 +64,26 @@ def render_sidebar(username, portfolio):
                                 if hist.empty:
                                     st.error("Brak ceny dla tej daty! Spróbuj innej daty lub sprawdź symbol.")
                                 else:
-                                    # Konwersja indeksu do dat (bez timezone)
                                     hist.index = pd.to_datetime(hist.index).date
-                                    
-                                    # Znajdź cenę na wybraną datę lub najbliższą dostępną
+
                                     if d_in in hist.index:
                                         price = float(hist.loc[d_in]['Close'])
                                         st.success(f"✓ Cena z {d_in}: {price:.2f} {asset_curr}")
                                     else:
-                                        # Użyj najbliższej dostępnej daty
                                         closest_date = min(hist.index, key=lambda x: abs(x - d_in))
                                         price = float(hist.loc[closest_date]['Close'])
                                         st.info(f"ℹ️ Użyto ceny z {closest_date}: {price:.2f} {asset_curr}")
-                                    
-                                    # Pobierz kursy walut (bez cache - świeże dane!)
                                     r_user = get_currency_rate(f"{c_in}PLN=X") if c_in != 'PLN' else 1.0
                                     r_asset = get_currency_rate(f"{asset_curr}PLN=X") if asset_curr != 'PLN' else 1.0
-                                    
-                                    # Wyświetl kursy dla przejrzystości
+
                                     if c_in != 'PLN':
                                         st.info(f"Kurs {c_in}/PLN: {r_user:.4f}")
                                     if asset_curr != 'PLN':
                                         st.info(f"Kurs {asset_curr}/PLN: {r_asset:.4f}")
-                                    
-                                    # Oblicz ilość i koszt w PLN
+
                                     cost_pln = a_in * r_user
                                     qty = cost_pln / (price * r_asset)
-                                    
-                                    # Wyświetl podsumowanie
+
                                     st.success(f"""
                                     **Podsumowanie transakcji:**
                                     - Kupujesz: {qty:.4f} jednostek {symbol}
@@ -102,7 +91,6 @@ def render_sidebar(username, portfolio):
                                     - Koszt całkowity: {cost_pln:.2f} PLN
                                     """)
                                     
-                                    # Dodaj do portfolio
                                     portfolio.append({
                                         'Symbol': symbol,
                                         'Data_Zakupu': d_in.strftime('%Y-%m-%d'),
@@ -111,11 +99,10 @@ def render_sidebar(username, portfolio):
                                         'Kwota_Poczatkowa_PLN': cost_pln,
                                         'Notatka': n_in
                                     })
-                                    
-                                    # Zapisz i odśwież
+
                                     if save_user_data(username, portfolio):
                                         st.success("✅ Transakcja dodana!")
-                                        st.cache_data.clear()  # Wyczyść cache dla świeżych danych
+                                        st.cache_data.clear()  
                                         st.rerun()
                                     else:
                                         st.error("Błąd zapisu do bazy danych")
@@ -169,3 +156,4 @@ def render_sidebar(username, portfolio):
                 st.info("Brak transakcji do usunięcia")
         
         return benchmarks
+
